@@ -279,6 +279,11 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 		while (-1 != (iPos = strfind(s_szBuffer, !"%", _, ++iPos))) {
 			new
 				iPrePos = iPos;
+		
+			static
+				s_szCustomFormatBuffer[FORMAT_CUSTOM_SPEC_BUFFER_SIZE]
+			;
+		
 			while (s_szBuffer[++iPos]) {
 				// Look for custom formats
 				if (1 <= s_szBuffer[iPos] < sizeof(gs_CustomFormatFunctions) && gs_CustomFormatFunctions[s_szBuffer[iPos]] != -1) {
@@ -288,11 +293,6 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 						E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs),
 						iFunc = gs_CustomFormatFunctions[s_szBuffer[iPos]]
 					;
-				
-					static
-						s_szCustomFormatBuffer[FORMAT_CUSTOM_SPEC_BUFFER_SIZE]
-					;
-				
 					strdel(s_szBuffer, iPos - 1, iPos + 1);
 				
 					s_szCustomFormatBuffer[0] = 0;
@@ -353,13 +353,14 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 					case 'u': {
 						//printf("%d", iArgCount);
 						new
-							szBuffer[11],
 							iWidth,
 							iPrec,
 							E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
 						;
 						//printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
 						//iArgCount = iPreCount;
+					
+						s_szCustomFormatBuffer[0] = 0;
 					
 						#emit LCTRL       5
 						#emit LOAD.S.alt  iArg
@@ -377,12 +378,12 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 							strins(s_szBuffer, "0", iPrePos);
 						} else {
 							new
-								j = sizeof(szBuffer) - 1
+								j = sizeof(s_szCustomFormatBuffer) - 1
 							;
 						
 							while (iArgValue) {
 								// szBuffer[--i]
-								#emit ADDR.alt    szBuffer  // alt = *szBuffer
+								#emit CONST.alt    s_szCustomFormatBuffer  // alt = *szBuffer
 								#emit LOAD.S.pri  j         // pri = i
 								#emit DEC.pri               // pri -= 1
 								#emit STOR.S.pri  j         // i = pri
@@ -400,11 +401,12 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 								#emit STOR.I                // szBuffer[i] = pri
 							}
 						
-							strins(s_szBuffer, szBuffer[j], iPrePos);
+							FormatFlags(s_szCustomFormatBuffer, _, s_szCustomFormatBuffer[j], iWidth, iPrec, iFlags);
+							strins(s_szBuffer, s_szCustomFormatBuffer, iPrePos);
 						}
 					}
 				
-					case '0' .. '9', ' ', '.':
+					case '0' .. '9', ' ', '.', '-':
 						continue;
 				
 					case '%':
