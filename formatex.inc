@@ -93,38 +93,71 @@ static stock InitializeFormatSpecifiers() {
 	}
 }
 
-stock FormatFlags(output[], size = sizeof (output), const input[], width, precision, E_FORMATEX_FLAGS:flags) {
+stock FormatFlags(output[], size = sizeof (output), const input[], width, precision, E_FORMATEX_FLAGS:flags, bool:reverse = false) {
 	switch (flags) {
 		case E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-s", input);
+			if (reverse)
+				format(output, size, "%-s", input);
+			else
+				format(output, size, "%s", input);
 		case E_FORMATEX_FLAGS_ZERO_PAD:
 			format(output, size, "%0s", input);
 		case E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-0s", input);
+			if (reverse)
+				format(output, size, "%-0s", input);
+			else
+				format(output, size, "%0s", input);
 		case E_FORMATEX_FLAGS_WIDTH:
-			format(output, size, "%*s", width, input);
+			if (reverse)
+				format(output, size, "%*s", width, input);
+			else
+				format(output, size, "%-*s", width, input);
 		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-*s", width, input);
+			if (reverse)
+				format(output, size, "%-*s", width, input);
+			else
+				format(output, size, "%*s", width, input);
 		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD:
-			format(output, size, "%0*s", width, input);
+			if (reverse)
+				format(output, size, "%0*s", width, input);
+			else
+				format(output, size, "%0*s", width, input);
 		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-0*s", width, input);
+			if (reverse)
+				format(output, size, "%-0*s", width, input);
+			else
+				format(output, size, "%0*s", width, input);
 		case E_FORMATEX_FLAGS_PRECISION:
 			format(output, size, "%.*s", precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-.*s", precision, input);
+			if (reverse)
+				format(output, size, "%-.*s", precision, input);
+			else
+				format(output, size, "%.*s", precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_ZERO_PAD:
-			format(output, size, "%0.*s", precision, input);
-		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
 			format(output, size, "%-0.*s", precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%0.*s", precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH:
-			format(output, size, "%*.*s", width, precision, input);
+			if (reverse)
+				format(output, size, "%*.*s", width, precision, input);
+			else
+				format(output, size, "%-*.*s", width, precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-*.*s", width, precision, input);
+			if (reverse)
+				format(output, size, "%-*.*s", width, precision, input);
+			else
+				format(output, size, "%*.*s", width, precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD:
-			format(output, size, "%0*.*s", width, precision, input);
+			if (reverse)
+				format(output, size, "%0*.*s", width, precision, input);
+			else
+				format(output, size, "%-0*.*s", width, precision, input);
 		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
-			format(output, size, "%-0*.*s", width, precision, input);
+			if (reverse)
+				format(output, size, "%-0*.*s", width, precision, input);
+			else
+				format(output, size, "%0*.*s", width, precision, input);
 		default:
 			format(output, size, "%s", input); // Yes, with good reason - you can copy a string to itself.
 	}
@@ -516,7 +549,7 @@ stock printfex(const szFormatString[], {FORMAT_TAGS}:...) {
 // Inline color
 FormatSpecifier<'C'>(output[], color, width, precision, E_FORMATEX_FLAGS:flags) {
 	format(output, sizeof(output), "{%06x}", color >>> 8);
-	FormatFlags(output, _, output, width, precision, flags);
+	FormatFlags(output, _, output, width, precision, flags, true);
 }
 #endif
 
@@ -532,9 +565,9 @@ FormatSpecifier<'p'>(output[], playerid, width, precision, E_FORMATEX_FLAGS:flag
 	if (0 <= playerid < GetMaxPlayers() && IsPlayerConnected(playerid)) {
 		GetPlayerName(playerid, output, sizeof(output));
 
-		FormatFlags(output, _, output, width, precision, flags);
+		FormatFlags(output, _, output, width, precision, flags, true);
 	} else
-		FormatFlags(output, _, #FORMAT_FALLBACK_p, width, precision, flags);
+		FormatFlags(output, _, #FORMAT_FALLBACK_p, width, precision, flags, true);
 }
 #endif
 
@@ -551,9 +584,9 @@ FormatSpecifier<'P'>(output[], playerid, width, precision, E_FORMATEX_FLAGS:flag
 		format(output, sizeof(output), "{%06x}", GetPlayerColor(playerid) >>> 8);
 		GetPlayerName(playerid, output[8], sizeof(output) - 8);
 
-		FormatFlags(output, _, output, width, precision, flags);
+		FormatFlags(output, _, output, width, precision, flags, true);
 	} else
-		FormatFlags(output, _, #FORMAT_FALLBACK_P, width, precision, flags);
+		FormatFlags(output, _, #FORMAT_FALLBACK_P, width, precision, flags, true);
 }
 #endif
 
@@ -591,9 +624,9 @@ FormatSpecifier<'W'>(output[], weapon, width, precision, E_FORMATEX_FLAGS:flags)
 	;
 	
 	if (0 <= weapon < sizeof(s_WeaponNames))
-		FormatFlags(output, _, s_WeaponNames[weapon], width, precision, flags);
+		FormatFlags(output, _, s_WeaponNames[weapon], width, precision, flags, true);
 	else
-		FormatFlags(output, _, #FORMAT_FALLBACK_W, width, precision, flags);
+		FormatFlags(output, _, #FORMAT_FALLBACK_W, width, precision, flags, true);
 }
 #endif
 
@@ -631,9 +664,9 @@ FormatSpecifier<'w'>(output[], weapon, width, precision, E_FORMATEX_FLAGS:flags)
 	;
 	
 	if (0 <= weapon < sizeof(s_WeaponNamesLowercaseSingular))
-		FormatFlags(output, _, s_WeaponNamesLowercaseSingular[weapon], width, precision, flags);
+		FormatFlags(output, _, s_WeaponNamesLowercaseSingular[weapon], width, precision, flags, true);
 	else
-		FormatFlags(output, _, #FORMAT_FALLBACK_w, width, precision, flags);
+		FormatFlags(output, _, #FORMAT_FALLBACK_w, width, precision, flags, true);
 }
 #endif
 
@@ -705,9 +738,9 @@ FormatSpecifier<'v'>(output[], modelid, width, precision, E_FORMATEX_FLAGS:flags
 	;
 	
 	if (0 <= (modelid -= 400) < sizeof(s_VehicleNames))
-		FormatFlags(output, _, s_VehicleNames[modelid], width, precision, flags);
+		FormatFlags(output, _, s_VehicleNames[modelid], width, precision, flags, true);
 	else
-		FormatFlags(output, _, #FORMAT_FALLBACK_v, width, precision, flags);
+		FormatFlags(output, _, #FORMAT_FALLBACK_v, width, precision, flags, true);
 }
 #endif
 

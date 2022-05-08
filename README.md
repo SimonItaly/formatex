@@ -161,7 +161,7 @@ FormatSpecifier<'S'>(output[], const param[], width, precision, E_FORMATEX_FLAGS
 }
 ```
 
-Using `FormatFlags` will apply standard paddings to the string, more custom code will have to use the parameters directly.
+Using `FormatFlags` will apply standard paddings to the string, more custom code will have to use the parameters directly.  `FormatFlags` also takes an extra `reverse` parameter.  With padding `%5i` pads to the left, but `%5s` pads to the right, so the former will give `    5` while the latter will give `hi   `.  `reverse` replicates the string padding method (and `-` switches either one).
 
 ## Additional notes
 
