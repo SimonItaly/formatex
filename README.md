@@ -147,6 +147,22 @@ main() {
 %v: Vrum Vrum much?
 ```
 
+## Width, precision, and flags
+
+In the default format specifiers you can add with and precision using `%5.2i`, or make them dynamic with `%*.*i`.  You can also left-pad with `-` or naught-pad with `0`: `%-7i`, `%03.*i`.  These options are all supported as additional parameters to the custom specifiers:
+
+
+```pawn
+// Upper-case string
+FormatSpecifier<'S'>(output[], const param[], width, precision, E_FORMATEX_FLAGS:flags) {
+	for (new i = 0, l = min(sizeof(output), strlen(param)); i < l; i++)
+		output[i] = toupper(param[i]);
+	FormatFlags(output, width, precision, flags);
+}
+```
+
+Using `FormatFlags` will apply standard paddings to the string, more custom code will have to use the parameters directly.
+
 ## Additional notes
 
 Worth mentioning is this is a superset of format, meaning it has exactly all the
@@ -154,3 +170,4 @@ features of format and those behave like always (the only exception is it's a
 bit friendlier to packed strings, though %s still doesn't support it).
 
 It actually uses the original native "format" function to do the heavy lifting.
+
