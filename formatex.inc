@@ -32,7 +32,6 @@
 enum E_FORMATEX_FLAGS (<<= 1) {
 	E_FORMATEX_FLAGS_LEFT_ADJUST = 1,
 	E_FORMATEX_FLAGS_ZERO_PAD,
-	E_FORMATEX_FLAGS_SPACE_PAD,
 	E_FORMATEX_FLAGS_WIDTH,
 	E_FORMATEX_FLAGS_PRECISION,
 	_E_FORMATEX_FLAGS_DYNAMIC_WIDTH,
@@ -120,10 +119,6 @@ static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &i
 			case '0': {
 				// Naught padding.
 				iFlags |= E_FORMATEX_FLAGS_ZERO_PAD;
-			}
-			case ' ': {
-				// Space padding.
-				iFlags |= E_FORMATEX_FLAGS_SPACE_PAD;
 			}
 			case '1' .. '9': {
 				iFlags |= E_FORMATEX_FLAGS_WIDTH;
