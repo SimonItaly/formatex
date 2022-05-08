@@ -85,6 +85,84 @@ static stock InitializeFormatSpecifiers() {
 	}
 }
 
+static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth, &iPrec, const aiArgs[128])
+{
+	new
+		iFlags = 0;
+	for ( ; ; ) {
+		switch (s_szBuffer[++iPos]) {
+			case '0': {
+				// Naught padding.
+				iFlags |= 1;
+			}
+			case ' ': {
+				// Naught padding.
+				iFlags |= 64;
+			}
+			case '1' .. '9': {
+				iFlags |= 16;
+				// Width.
+				while ('0' <= s_szBuffer[iPos] <= '9') {
+					iWidth = (iWidth * 10) + (s_szBuffer[iPos++] - '0');
+				}
+				--iPos;
+			}
+			case '*': {
+				// Dynamic width.
+				iFlags |= 2;
+			}
+			case '.': {
+				// Precision.
+				iFlags |= 4;
+				break;
+			}
+			default: {
+				break;
+			}
+		}
+	}
+	if (iFlags & 4) {
+		for ( ; ; ) {
+			switch (s_szBuffer[++iPos]) {
+				iFlags |= 32;
+				case '0' .. '9': {
+					// Precision.
+					while ('0' <= s_szBuffer[iPos] <= '9') {
+						iPrec = (iPrec * 10) + (s_szBuffer[iPos++] - '0');
+					}
+					--iPos;
+				}
+				case '*': {
+					// Dynamic precision.
+					iFlags |= 8;
+				}
+				default: {
+					break;
+				}
+			}
+		}
+	}
+	switch (iFlags & 10) {
+		case 2: {
+			// Dynamic width.
+			iFlags |= 16;
+			iWidth = aiArgs[--iArgCount];
+		}
+		case 8: {
+			// Dynamic precision.
+			iFlags |= 32;
+			iPrec = aiArgs[--iArgCount];
+		}
+		case 10: {
+			iFlags |= 48;
+			// Dynamic width and precision.
+			iPrec = aiArgs[--iArgCount];
+			iWidth = aiArgs[--iArgCount];
+		}
+	}
+	return iFlags;
+}
+
 stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {FORMAT_TAGS}:...) {
 	static
 		     s_szBuffer[FORMAT_BUFFER_SIZE],
@@ -146,6 +224,8 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 		strunpack(s_szBuffer, szFormatString);
 		
 		while (-1 != (iPos = strfind(s_szBuffer, !"%", _, ++iPos))) {
+			new
+				iPrePos = iPos + 1;
 			while (s_szBuffer[++iPos]) {
 				// Look for custom formats
 				if (1 <= s_szBuffer[iPos] < sizeof(gs_CustomFormatFunctions) && gs_CustomFormatFunctions[s_szBuffer[iPos]] != -1) {
@@ -215,6 +295,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 						new
 							szBuffer[11]
 						;
+						//iArgCount = iPreCount;
 					
 						#emit LCTRL       5
 						#emit LOAD.S.alt  iArg
