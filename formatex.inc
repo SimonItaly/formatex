@@ -158,15 +158,27 @@ static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &i
 		case _E_FORMATEX_FLAGS_DYNAMIC_WIDTH: {
 			// Dynamic width.
 			iWidth = aiArgs[--iArgCount];
+			#emit LREF.S.pri iWidth
+			#emit LOAD.I
+			#emit SREF.S.pri iWidth
 		}
 		case _E_FORMATEX_FLAGS_DYNAMIC_PREC: {
 			// Dynamic precision.
 			iPrec = aiArgs[--iArgCount];
+			#emit LREF.S.pri iPrec
+			#emit LOAD.I
+			#emit SREF.S.pri iPrec
 		}
 		case _E_FORMATEX_FLAGS_DYNAMIC_WIDTH | _E_FORMATEX_FLAGS_DYNAMIC_PREC: {
 			// Dynamic width and precision.
 			iPrec = aiArgs[--iArgCount];
 			iWidth = aiArgs[--iArgCount];
+			#emit LREF.S.pri iPrec
+			#emit LOAD.I
+			#emit SREF.S.pri iPrec
+			#emit LREF.S.pri iWidth
+			#emit LOAD.I
+			#emit SREF.S.pri iWidth
 		}
 	}
 	return iFlags;
@@ -311,7 +323,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 							iPrec,
 							E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
 						;
-						//printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
+						printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
 						//iArgCount = iPreCount;
 					
 						#emit LCTRL       5
