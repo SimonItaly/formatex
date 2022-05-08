@@ -40,7 +40,7 @@ enum E_FORMATEX_FLAGS (<<= 1) {
 }
 
 #define FormatSpecifier<'%1'>(%2[%3],%4)  FMAT@1:F@%1(%2[FORMAT_CUSTOM_SPEC_BUFFER_SIZE],FMAT@2:___unused,%4)
-#define FMAT@2:___unused,%1[              %1[
+#define FMAT@2:___unused,%1[%2]           %1[%2],__unused
 #define FMAT@1:%1(%2)                     forward %1(%2); public %1(%2)
 
 static stock
@@ -92,6 +92,19 @@ static stock InitializeFormatSpecifiers() {
 			gs_CustomFormatFunctions[c] = iFunctionAddress;
 		}
 	}
+}
+
+stock FormatEx_Append(output[], size = sizeof(output), const input[], width, precision, E_FORMATEX_FLAGS:flags) {
+	if (flags & E_FORMATEX_FLAGS_WIDTH)
+		if (flags & E_FORMATEX_FLAGS_PRECISION)
+			format(output, size, "%*.*s", width, precision, input);
+		else
+			format(output, size, "%*s", width, input);
+	else
+		if (flags & E_FORMATEX_FLAGS_PRECISION)
+			format(output, size, "%.*s", precision, input);
+		else
+			strcat(output, input, size);
 }
 
 static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth, &iPrec, const aiArgs[128])
@@ -181,7 +194,7 @@ static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &i
 			#emit SREF.S.pri iWidth
 		}
 	}
-	return iFlags;
+	return iFlags & ~(_E_FORMATEX_FLAGS_DYNAMIC_WIDTH | _E_FORMATEX_FLAGS_DYNAMIC_PREC);
 }
 
 stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {FORMAT_TAGS}:...) {
@@ -265,6 +278,9 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 				
 					s_szCustomFormatBuffer[0] = 0;
 				
+					#emit PUSH.s      iFlags
+					#emit PUSH.s      iPrec
+					#emit PUSH.s      iWidth
 					#emit LCTRL       5
 					#emit LOAD.S.alt  iArg
 					#emit ADD
@@ -279,7 +295,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 					s_bIsInCustomSpecifier = true;
 				
 					#emit PUSH.C      s_szCustomFormatBuffer
-					#emit PUSH.C      12
+					#emit PUSH.C      24
 					#emit LCTRL       6
 					#emit ADD.C       28
 					#emit PUSH.pri
@@ -323,7 +339,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 							iPrec,
 							E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
 						;
-						printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
+						//printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
 						//iArgCount = iPreCount;
 					
 						#emit LCTRL       5
@@ -477,8 +493,10 @@ stock printfex(const szFormatString[], {FORMAT_TAGS}:...) {
 
 #if !defined FORMAT_NO_DEFAULT_SPECIFIER_C
 // Inline color
-FormatSpecifier<'C'>(output[], color) {
-	format(output, sizeof(output), "{%06x}", color >>> 8);
+FormatSpecifier<'C'>(output[], color, width, precision, E_FORMATEX_FLAGS:flags) {
+	new tmp[8 + 1];
+	format(tmp, sizeof(tmp), "{%06x}", color >>> 8);
+	FormatEx_Append(output, sizeof(output), tmp, width, precision, flags);
 }
 #endif
 
@@ -490,11 +508,14 @@ FormatSpecifier<'C'>(output[], color) {
 #endif
 
 // Player name
-FormatSpecifier<'p'>(output[], playerid) {
-	if (0 <= playerid < GetMaxPlayers() && IsPlayerConnected(playerid))
-		GetPlayerName(playerid, output, sizeof(output));
-	else
-		strcat(output, #FORMAT_FALLBACK_p);
+FormatSpecifier<'p'>(output[], playerid, width, precision, E_FORMATEX_FLAGS:flags) {
+	if (0 <= playerid < GetMaxPlayers() && IsPlayerConnected(playerid)) {
+		new tmp[MAX_PLAYER_NAME + 1];
+		GetPlayerName(playerid, tmp, sizeof(tmp));
+
+		FormatEx_Append(output, sizeof(output), tmp, width, precision, flags);
+	} else
+		FormatEx_Append(output, sizeof(output), #FORMAT_FALLBACK_p, width, precision, flags);
 }
 #endif
 
@@ -506,13 +527,15 @@ FormatSpecifier<'p'>(output[], playerid) {
 #endif
 
 // Player name and color
-FormatSpecifier<'P'>(output[], playerid) {
+FormatSpecifier<'P'>(output[], playerid, width, precision, E_FORMATEX_FLAGS:flags) {
 	if (0 <= playerid < GetMaxPlayers() && IsPlayerConnected(playerid)) {
-		format(output, sizeof(output), "{%06x}", GetPlayerColor(playerid) >>> 8);
-		
-		GetPlayerName(playerid, output[8], sizeof(output) - 8);
+		new tmp[MAX_PLAYER_NAME + 8 + 1];
+		format(tmp, sizeof(tmp), "{%06x}", GetPlayerColor(playerid) >>> 8);
+		GetPlayerName(playerid, tmp[8], sizeof(tmp) - 8);
+
+		FormatEx_Append(output, sizeof(output), tmp, width, precision, flags);
 	} else
-		strcat(output, #FORMAT_FALLBACK_P);
+		FormatEx_Append(output, sizeof(output), #FORMAT_FALLBACK_P, width, precision, flags);
 }
 #endif
 
@@ -524,7 +547,7 @@ FormatSpecifier<'P'>(output[], playerid) {
 #endif
 
 // Weapon name
-FormatSpecifier<'W'>(output[], weapon) {
+FormatSpecifier<'W'>(output[], weapon, width, precision, E_FORMATEX_FLAGS:flags) {
 	static const
 		s_WeaponNames[][] = {
 			{!"Fists"          		}, {!"Brass Knuckles"   }, {!"Golf club"       		}, //  0,  1,  2
@@ -550,9 +573,9 @@ FormatSpecifier<'W'>(output[], weapon) {
 	;
 	
 	if (0 <= weapon < sizeof(s_WeaponNames))
-		strcat(output, s_WeaponNames[weapon]);
+		FormatEx_Append(output, sizeof(output), s_WeaponNames[weapon], width, precision, flags);
 	else
-		strcat(output, #FORMAT_FALLBACK_W);
+		FormatEx_Append(output, sizeof(output), #FORMAT_FALLBACK_W, width, precision, flags);
 }
 #endif
 
@@ -564,7 +587,7 @@ FormatSpecifier<'W'>(output[], weapon) {
 #endif
 
 // Weapon name, lower-case singular (for sentences)
-FormatSpecifier<'w'>(output[], weapon) {
+FormatSpecifier<'w'>(output[], weapon, width, precision, E_FORMATEX_FLAGS:flags) {
 	static const
 		s_WeaponNamesLowercaseSingular[][] = {
 			{!"fists"             	}, {!"brass knuckles"     }, {!"a golfclub"       }, //  0,  1,  2
@@ -590,9 +613,9 @@ FormatSpecifier<'w'>(output[], weapon) {
 	;
 	
 	if (0 <= weapon < sizeof(s_WeaponNamesLowercaseSingular))
-		strcat(output, s_WeaponNamesLowercaseSingular[weapon]);
+		FormatEx_Append(output, sizeof(output), s_WeaponNamesLowercaseSingular[weapon], width, precision, flags);
 	else
-		strcat(output, #FORMAT_FALLBACK_w);
+		FormatEx_Append(output, sizeof(output), #FORMAT_FALLBACK_w, width, precision, flags);
 }
 #endif
 
@@ -604,7 +627,7 @@ FormatSpecifier<'w'>(output[], weapon) {
 #endif
 
 // Vehicle name
-FormatSpecifier<'v'>(output[], modelid) {
+FormatSpecifier<'v'>(output[], modelid, width, precision, E_FORMATEX_FLAGS:flags) {
 	static const
 		s_VehicleNames[][] = {	
 			{!"Landstalker"      }, {!"Bravura"          }, {!"Buffalo"          }, {!"Linerunner"       },
@@ -664,9 +687,9 @@ FormatSpecifier<'v'>(output[], modelid) {
 	;
 	
 	if (0 <= (modelid -= 400) < sizeof(s_VehicleNames))
-		strcat(output, s_VehicleNames[modelid]);
+		FormatEx_Append(output, sizeof(output), s_VehicleNames[modelid], width, precision, flags);
 	else
-		strcat(output, #FORMAT_FALLBACK_v);
+		FormatEx_Append(output, sizeof(output), #FORMAT_FALLBACK_v, width, precision, flags);
 }
 #endif
 
