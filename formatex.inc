@@ -94,16 +94,40 @@ static stock InitializeFormatSpecifiers() {
 }
 
 stock FormatFlags(output[], size = sizeof (output), const input[], width, precision, E_FORMATEX_FLAGS:flags) {
-	if (flags & E_FORMATEX_FLAGS_WIDTH)
-		if (flags & E_FORMATEX_FLAGS_PRECISION)
-			format(output, size, "%*.*s", width, precision, input);
-		else
+	switch (flags) {
+		case E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-s", input);
+		case E_FORMATEX_FLAGS_ZERO_PAD:
+			format(output, size, "%0s", input);
+		case E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-0s", input);
+		case E_FORMATEX_FLAGS_WIDTH:
 			format(output, size, "%*s", width, input);
-	else
-		if (flags & E_FORMATEX_FLAGS_PRECISION)
+		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-*s", width, input);
+		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD:
+			format(output, size, "%0*s", width, input);
+		case E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-0*s", width, input);
+		case E_FORMATEX_FLAGS_PRECISION:
 			format(output, size, "%.*s", precision, input);
-		else
-			format(output, size, input); // Yes, with good reason - you can copy a string to itself.
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-.*s", precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_ZERO_PAD:
+			format(output, size, "%0.*s", precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-0.*s", precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH:
+			format(output, size, "%*.*s", width, precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-*.*s", width, precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD:
+			format(output, size, "%0*.*s", width, precision, input);
+		case E_FORMATEX_FLAGS_PRECISION | E_FORMATEX_FLAGS_WIDTH | E_FORMATEX_FLAGS_ZERO_PAD | E_FORMATEX_FLAGS_LEFT_ADJUST:
+			format(output, size, "%-0*.*s", width, precision, input);
+		default:
+			format(output, size, "%s", input); // Yes, with good reason - you can copy a string to itself.
+	}
 }
 
 static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth, &iPrec, const aiArgs[128])
