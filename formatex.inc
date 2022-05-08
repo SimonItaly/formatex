@@ -124,8 +124,8 @@ static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth
 	if (iFlags & 4) {
 		for ( ; ; ) {
 			switch (s_szBuffer[++iPos]) {
-				iFlags |= 32;
 				case '0' .. '9': {
+					iFlags |= 32;
 					// Precision.
 					while ('0' <= s_szBuffer[iPos] <= '9') {
 						iPrec = (iPrec * 10) + (s_szBuffer[iPos++] - '0');
@@ -225,7 +225,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 		
 		while (-1 != (iPos = strfind(s_szBuffer, !"%", _, ++iPos))) {
 			new
-				iPrePos = iPos + 1;
+				iPrePos = iPos;
 			while (s_szBuffer[++iPos]) {
 				// Look for custom formats
 				if (1 <= s_szBuffer[iPos] < sizeof(gs_CustomFormatFunctions) && gs_CustomFormatFunctions[s_szBuffer[iPos]] != -1) {
@@ -292,9 +292,14 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 				
 					// Unsigned numbers
 					case 'u': {
+						//printf("%d", iArgCount);
 						new
-							szBuffer[11]
+							szBuffer[11],
+							iWidth,
+							iPrec,
+							iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
 						;
+						//printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
 						//iArgCount = iPreCount;
 					
 						#emit LCTRL       5
@@ -307,10 +312,10 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 						#emit ADD.C       4
 						#emit STOR.S.pri  iArg
 					
-						strdel(s_szBuffer, iPos - 1, iPos + 1);
+						strdel(s_szBuffer, iPrePos, iPos + 1);
 					
 						if (!iArgValue) {
-							strins(s_szBuffer, "0", iPos - 1);
+							strins(s_szBuffer, "0", iPrePos);
 						} else {
 							new
 								j = sizeof(szBuffer) - 1
@@ -336,7 +341,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 								#emit STOR.I                // szBuffer[i] = pri
 							}
 						
-							strins(s_szBuffer, szBuffer[j], iPos - 1);
+							strins(s_szBuffer, szBuffer[j], iPrePos);
 						}
 					}
 				
