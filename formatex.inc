@@ -29,6 +29,15 @@
 	#define FORMAT_REPLACE_NATIVES true
 #endif
 
+enum E_FORMATEX_FLAGS (<<= 1) {
+	E_FORMATEX_FLAGS_LEFT_ADJUST = 1,
+	E_FORMATEX_FLAGS_ZERO_PAD,
+	E_FORMATEX_FLAGS_SPACE_PAD,
+	E_FORMATEX_FLAGS_WIDTH,
+	E_FORMATEX_FLAGS_PRECISION,
+	_E_FORMATEX_FLAGS_DYNAMIC_WIDTH,
+	_E_FORMATEX_FLAGS_DYNAMIC_PREC,
+}
 
 #define FormatSpecifier<'%1'>(%2[%3],%4)  FMAT@1:F@%1(%2[FORMAT_CUSTOM_SPEC_BUFFER_SIZE],FMAT@2:___unused,%4)
 #define FMAT@2:___unused,%1[              %1[
@@ -85,22 +94,26 @@ static stock InitializeFormatSpecifiers() {
 	}
 }
 
-static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth, &iPrec, const aiArgs[128])
+static stock E_FORMATEX_FLAGS:FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth, &iPrec, const aiArgs[128])
 {
 	new
-		iFlags = 0;
+		E_FORMATEX_FLAGS:iFlags = E_FORMATEX_FLAGS:0;
 	for ( ; ; ) {
 		switch (s_szBuffer[++iPos]) {
+			case '-': {
+				// Left adjust.
+				iFlags |= E_FORMATEX_FLAGS_LEFT_ADJUST;
+			}
 			case '0': {
 				// Naught padding.
-				iFlags |= 1;
+				iFlags |= E_FORMATEX_FLAGS_ZERO_PAD;
 			}
 			case ' ': {
-				// Naught padding.
-				iFlags |= 64;
+				// Space padding.
+				iFlags |= E_FORMATEX_FLAGS_SPACE_PAD;
 			}
 			case '1' .. '9': {
-				iFlags |= 16;
+				iFlags |= E_FORMATEX_FLAGS_WIDTH;
 				// Width.
 				while ('0' <= s_szBuffer[iPos] <= '9') {
 					iWidth = (iWidth * 10) + (s_szBuffer[iPos++] - '0');
@@ -109,11 +122,11 @@ static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth
 			}
 			case '*': {
 				// Dynamic width.
-				iFlags |= 2;
+				iFlags |= E_FORMATEX_FLAGS_PRECISION | _E_FORMATEX_FLAGS_DYNAMIC_WIDTH;
 			}
 			case '.': {
 				// Precision.
-				iFlags |= 4;
+				iFlags |= E_FORMATEX_FLAGS_PRECISION;
 				break;
 			}
 			default: {
@@ -121,11 +134,10 @@ static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth
 			}
 		}
 	}
-	if (iFlags & 4) {
+	if (iFlags & E_FORMATEX_FLAGS_PRECISION) {
 		for ( ; ; ) {
 			switch (s_szBuffer[++iPos]) {
 				case '0' .. '9': {
-					iFlags |= 32;
 					// Precision.
 					while ('0' <= s_szBuffer[iPos] <= '9') {
 						iPrec = (iPrec * 10) + (s_szBuffer[iPos++] - '0');
@@ -134,7 +146,7 @@ static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth
 				}
 				case '*': {
 					// Dynamic precision.
-					iFlags |= 8;
+					iFlags |= _E_FORMATEX_FLAGS_DYNAMIC_PREC;
 				}
 				default: {
 					break;
@@ -142,19 +154,16 @@ static stock FormatEx_WidthAndPrec(const s_szBuffer[], iPos, &iArgCount, &iWidth
 			}
 		}
 	}
-	switch (iFlags & 10) {
-		case 2: {
+	switch (iFlags & (_E_FORMATEX_FLAGS_DYNAMIC_WIDTH | _E_FORMATEX_FLAGS_DYNAMIC_PREC)) {
+		case _E_FORMATEX_FLAGS_DYNAMIC_WIDTH: {
 			// Dynamic width.
-			iFlags |= 16;
 			iWidth = aiArgs[--iArgCount];
 		}
-		case 8: {
+		case _E_FORMATEX_FLAGS_DYNAMIC_PREC: {
 			// Dynamic precision.
-			iFlags |= 32;
 			iPrec = aiArgs[--iArgCount];
 		}
-		case 10: {
-			iFlags |= 48;
+		case _E_FORMATEX_FLAGS_DYNAMIC_WIDTH | _E_FORMATEX_FLAGS_DYNAMIC_PREC: {
 			// Dynamic width and precision.
 			iPrec = aiArgs[--iArgCount];
 			iWidth = aiArgs[--iArgCount];
@@ -230,6 +239,9 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 				// Look for custom formats
 				if (1 <= s_szBuffer[iPos] < sizeof(gs_CustomFormatFunctions) && gs_CustomFormatFunctions[s_szBuffer[iPos]] != -1) {
 					new
+						iWidth,
+						iPrec,
+						E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs),
 						iFunc = gs_CustomFormatFunctions[s_szBuffer[iPos]]
 					;
 				
@@ -297,7 +309,7 @@ stock formatex(szOutput[], iLength = sizeof(szOutput), const szFormatString[], {
 							szBuffer[11],
 							iWidth,
 							iPrec,
-							iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
+							E_FORMATEX_FLAGS:iFlags = FormatEx_WidthAndPrec(s_szBuffer, iPrePos, iArgCount, iWidth, iPrec, aiArgs)
 						;
 						//printf("%d %d %d %d %d %d", iFlags, iPrePos, iPos, iArgCount, iWidth, iPrec);
 						//iArgCount = iPreCount;
